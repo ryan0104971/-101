@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>101 Solo - Audio Fixed Edition</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --tower-color: #1e3c40;
+            --tower-light: #2d5a5e;
+            --accent-red: #ff4757;
+            --text-gold: #f1c40f;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: "Microsoft JhengHei", sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; overflow: hidden;
+            transition: background-color 0.1s;
+        }
+
+        /* Overlays */
+        #setup-overlay, #success-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #success-overlay { display: none; background: radial-gradient(circle, #2c3e50 0%, #000 100%); z-index: 3000; }
+
+        .box {
+            background: #222; padding: 40px; border-radius: 30px; text-align: center; 
+            border: 2px solid var(--tower-light); box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+
+        #video-preview { width: 280px; height: 210px; border-radius: 10px; object-fit: cover; border: 1px solid #444; background: #000; }
+        .success-photo { width: 160px; height: 160px; border-radius: 50%; border: 5px solid var(--text-gold); object-fit: cover; margin-bottom: 20px; }
+        .default-avatar-final { width: 100px; height: 100px; fill: var(--accent-red); margin-bottom: 20px; }
+
+        /* Stats */
+        #stats-panel {
+            position: absolute; left: 25px; top: 50%; transform: translateY(-50%);
+            font-family: monospace; color: var(--text-gold); border-left: 2px solid var(--text-gold); padding-left: 15px; opacity: 0.8;
+        }
+        #secret-trigger { cursor: pointer; }
+        .stat-label { font-size: 0.7rem; color: #888; display: block; }
+        .stat-value { font-size: 1.2rem; margin-bottom: 10px; display: block; }
+
+        /* Tower */
+        .climb-scene { position: relative; width: 350px; height: 500px; display: flex; justify-content: center; border-bottom: 8px solid #333; }
+        .tower-structure { position: absolute; bottom: 0; display: flex; flex-direction: column-reverse; align-items: center; }
+        .segment { width: 100px; height: 45px; background: linear-gradient(to bottom, var(--tower-light), var(--tower-color)); border: 1px solid rgba(255,255,255,0.1); margin-bottom: -12px; clip-path: polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%); }
+        .base { width: 140px; height: 70px; background: var(--tower-color); clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%); }
+        .needle { width: 4px; height: 50px; background: #fff; box-shadow: 0 0 15px #fff; }
+
+        /* Character */
+        #alex-container {
+            position: absolute; bottom: 0%; left: 50%; transform: translateX(-50%);
+            z-index: 100; transition: bottom 1s linear; display: flex; flex-direction: column; align-items: center;
+        }
+        #user-face { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--accent-red); object-fit: cover; margin-bottom: -12px; z-index: 101; background: #333; display: none; }
+        #default-head { width: 20px; height: 20px; background: var(--accent-red); border-radius: 50%; margin-bottom: -10px; z-index: 101; }
+        #alex-body svg { fill: var(--accent-red); width: 24px; height: 24px; }
+        #display-name { font-size: 12px; color: white; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 10px; margin-top: 4px; border: 1px solid var(--accent-red); }
+
+        .climbing-anim { animation: sway 0.6s infinite ease-in-out; }
+        @keyframes sway { 50% { transform: translateX(-50%) rotate(5deg); } }
+
+        /* UI */
+        .ui-panel { background: rgba(30, 30, 30, 0.95); padding: 20px; border-radius: 20px; text-align: center; width: 320px; margin-top: 15px; }
+        #timer { font-size: 3rem; font-weight: bold; color: var(--text-gold); font-family: monospace; }
+        .btns button { padding: 12px 24px; font-size: 1rem; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; }
+        #start-btn { background: #2ecc71; color: white; }
+        #fall-btn { background: #e74c3c; color: white; margin-left: 10px; visibility: hidden; }
+        
+        .lightning-flash { background-color: #2a3a4a !important; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-overlay">
+        <div class="box">
+            <h2 style="color:var(--text-gold)">101 獨攀挑戰登記</h2>
+            <video id="video-preview" autoplay playsinline></video><br>
+            <input type="text" id="user-name-input" placeholder="攀登者姓名..." maxlength="12" style="padding:12px; margin:15px 0; width:260px; border-radius:8px; border:1px solid #444; background:#111; color:white;"><br>
+            <button id="snap-btn" style="background:var(--accent-red); color:white; width:100%; padding:15px; border-radius:10px; border:none; cursor:pointer; font-weight:bold;">登記並開始</button>
+        </div>
+    </div>
+
+    <div id="success-overlay">
+        <div class="box">
+            <h1 style="color:var(--text-gold); margin-bottom:20px;">攻頂成功！</h1>
+            <div id="success-avatar-container"></div>
+            <h2 id="final-name" style="margin:5px 0;"></h2>
+            <p style="color:#aaa;">成功完成 90 分鐘專注訓練</p>
+            <button onclick="location.reload()" style="background:var(--text-gold); color:black; padding:12px 40px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; margin-top:20px;">再次挑戰</button>
+        </div>
+    </div>
+
+    <div id="stats-panel">
+        <span class="stat-label" id="secret-trigger">高度 ALTITUDE</span>
+        <span class="stat-value"><span id="alt-val">0</span> m</span>
+        <span class="stat-label">速率 VELOCITY</span>
+        <span class="stat-value"><span id="vel-val">0.00</span> m/s</span>
+    </div>
+
+    <div class="climb-scene">
+        <div id="alex-container">
+            <div id="default-head"></div>
+            <img id="user-face" src="">
+            <div id="alex-body">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+            <div id="display-name"></div>
+        </div>
+        <div class="tower-structure">
+            <div class="base"></div>
+            <div class="segment"></div><div class="segment"></div><div class="segment"></div><div class="segment"></div><div class="segment"></div><div class="segment"></div>
+            <div class="needle"></div>
+        </div>
+    </div>
+
+    <div class="ui-panel">
+        <div id="timer">90:00</div>
+        <div style="margin:10px 0; color:#888; font-size:0.8rem;">
+            🔈 <input type="range" id="vol-slider" min="0" max="0.3" step="0.01" value="0.05"> 🌬️
+        </div>
+        <div class="btns">
+            <button id="start-btn">開始攻頂</button>
+            <button id="fall-btn">手滑墜落</button>
+        </div>
+    </div>
+
+    <canvas id="photo-canvas" style="display:none;"></canvas>
+
+    <script>
+        let workTime = 90 * 60, timeLeft = workTime, timerId = null;
+        let audioCtx, noiseNode, gainNode;
+
+        const video = document.getElementById('video-preview');
+        const userFace = document.getElementById('user-face');
+        const defaultHead = document.getElementById('default-head');
+        const alexContainer = document.getElementById('alex-container');
+        const displayName = document.getElementById('display-name');
+        const volSlider = document.getElementById('vol-slider');
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = noiseBuffer; noiseNode.loop = true;
+            gainNode = audioCtx.createGain(); 
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime); 
+            noiseNode.connect(gainNode); gainNode.connect(audioCtx.destination);
+            noiseNode.start();
+        }
+
+        // 即時監聽滑桿數值變化
+        volSlider.oninput = () => {
+            if (gainNode) {
+                // 使用 linearRamp 讓音量過渡更平滑，不產生爆音
+                gainNode.gain.linearRampToValueAtTime(volSlider.value, audioCtx.currentTime + 0.1);
+            }
+        };
+
+        function playSfx(freq, type, duration, vol) {
+            if (!audioCtx) initAudio();
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            if (type === 'sawtooth') osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + duration);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { video.srcObject = stream; }).catch(()=>{});
+
+        document.getElementById('snap-btn').onclick = () => {
+            const name = document.getElementById('user-name-input').value || "攀登者";
+            displayName.textContent = name;
+            document.getElementById('final-name').textContent = name;
+            const canvas = document.getElementById('photo-canvas');
+            if (video.srcObject && video.readyState === 4) {
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const data = canvas.toDataURL('image/png');
+                userFace.src = data; userFace.style.display = 'block';
+                defaultHead.style.display = 'none';
+                document.getElementById('success-avatar-container').innerHTML = `<img src="${data}" class="success-photo">`;
+                video.srcObject.getTracks().forEach(t => t.stop());
+            } else {
+                document.getElementById('success-avatar-container').innerHTML = `<svg class="default-avatar-final" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/></svg>`;
+            }
+            document.getElementById('setup-overlay').style.display = 'none';
+        };
+
+        function updateUI() {
+            const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+            document.getElementById('timer').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const progress = (workTime - timeLeft) / workTime;
+            alexContainer.style.bottom = (progress * 50) + "%";
+            document.getElementById('alt-val').textContent = Math.floor(progress * 508);
+            document.getElementById('vel-val').textContent = (0.09 + Math.random() * 0.02).toFixed(2);
+            if (timeLeft % 300 === 0) {
+                document.body.classList.add('lightning-flash');
+                setTimeout(() => document.body.classList.remove('lightning-flash'), 100);
+            }
+        }
+
+        document.getElementById('start-btn').onclick = () => {
+            if (timerId) return;
+            initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume();
+            // 開始時根據滑桿位置設定音量
+            gainNode.gain.linearRampToValueAtTime(volSlider.value, audioCtx.currentTime + 1.5);
+            document.getElementById('start-btn').style.visibility = "hidden";
+            document.getElementById('fall-btn').style.visibility = "visible";
+            alexContainer.classList.add('climbing-anim');
+            timerId = setInterval(() => {
+                if (timeLeft > 0) { timeLeft--; updateUI(); }
+                else { 
+                    clearInterval(timerId); 
+                    document.getElementById('success-overlay').style.display = 'flex';
+                    playSfx(880, 'sine', 1.5, 0.2); 
+                }
+            }, 1000);
+        };
+
+        document.getElementById('fall-btn').onclick = () => {
+            clearInterval(timerId); timerId = null;
+            playSfx(150, 'sawtooth', 1.2, 0.4); 
+            timeLeft = workTime; updateUI(); 
+            gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            alexContainer.classList.remove('climbing-anim');
+            alexContainer.style.transition = "bottom 1s cubic-bezier(.47,0,.74,.71)";
+            alexContainer.style.bottom = "0%";
+            document.getElementById('start-btn').style.visibility = "visible";
+            document.getElementById('fall-btn').style.visibility = "hidden";
+            setTimeout(() => { alexContainer.style.transition = "bottom 1s linear"; }, 1000);
+        };
+
+        document.getElementById('secret-trigger').onclick = () => {
+            const n = prompt("祕密傳送門：幾分鐘？", Math.floor(timeLeft / 60));
+            if (n !== null) { timeLeft = n * 60; updateUI(); }
+        };
+    </script>
+</body>
+</html>
